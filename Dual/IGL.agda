@@ -146,11 +146,7 @@ mexts
   : MSubst Δ Δ′
   → MSubst (Δ , B) (Δ′ , B) 
 mexts σ Z     = ` (S Z)
-mexts σ (S x) =  rename σ′ S_ (σ x)
-  where
-    σ′ : {A C : Type} → Δ′ , □ A ∋ C → Δ′ , B , □ A ∋ C
-    σ′ Z     = Z
-    σ′ (S x) = S (S x)
+mexts σ (S x) =  rename (ext S_) S_ (σ x)
 
 _⟪_⟫ : Δ ︔ Γ ⊢ A
   → Subst Δ Γ Γ′
