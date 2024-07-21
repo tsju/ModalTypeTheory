@@ -2,10 +2,13 @@
 
 module Dual.IGL.Rice where
 
-open import Data.Nat using (ℕ; suc; zero; _<_)
-open import Data.Nat.Properties using (<-trans)
+open import Data.Nat using (ℕ; suc; zero; _≤_; _<_)
+open import Data.Nat.Properties using (<-trans; ≤-refl)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl)
+open import Data.Unit using (⊤; tt)
 open import Data.Empty using (⊥)
-open import Data.Product using (Σ-syntax; _×_)
+open import Data.Product using (Σ-syntax; ∃-syntax; _×_)
+import Data.Product as P
 open import Function hiding (_∋_)
 open import Dual.IGL
 
@@ -310,3 +313,92 @@ rice : {d : ∅ ︔ ∅ ⊢ □ A →̇ ℕ̇}
 rice {N = N} dM-↠0 dN-↠1 with sim* (~-refl · (mfix! {n = 0} {M′ = N} (λ ()))) dM-↠0
 ... | leg* zero dN-↠0 with confluence dN-↠0 dN-↠1
 ... | _ Data.Product., (_ ∎) Data.Product., (_ -→⟨ ξ-suc () ⟩ _)
+
+-- Logical Relation
+infix 2 V[_]∋_~_
+infix 2 E[_]∋_~_
+
+mutual
+  V[_]∋_~_ : (A : Type) → ∀ {M N} → Value {A = A} M  → Value {A = A} N → Set
+  V[ A →̇ B ]∋ ƛ M ~ ƛ N = ∀ {M′ N′} {VM′ : Value M′} {VN′ : Value N′} → V[ A ]∋ VM′ ~ VN′ → E[ B ]∋ M [ M′ ] ~ N [ N′ ]
+  V[ □ A ]∋ mfix M ~ mfix N = ⊤
+  V[_]∋_~_ ⊤̇ {M = M} {N = N} VM VN = M ≡ N
+  V[_]∋_~_ ℕ̇ {M = M} {N = N} VM VN = M ≡ N
+  V[_]∋_~_ (A ×̇ B) ⟨ M₁ , M₂ ⟩ ⟨ N₁ , N₂ ⟩ = (E[ A ]∋ M₁ ~ N₁) × (E[ B ]∋ M₂ ~ N₂)
+
+  E[_]∋_~_ : (A : Type) → (M N : ∅ ︔ ∅ ⊢ A) → Set
+  E[ A ]∋ M ~ N = ∃[ M′ ] ∃[ N′ ] (∅ ︔ ∅ ⊢ M -↠ M′) × (∅ ︔ ∅ ⊢ N -↠ N′) × Σ[ VM′ ∈  Value M′ ] Σ[ VN′ ∈ Value N′ ] V[ A ]∋ VM′ ~ VN′
+
+  G[_]∋_~_ : (Γ : Cxt) → (σ σ′ : Subst ∅ Γ ∅) → Set
+  G[ Γ ]∋ σ ~ σ′ = ∀ {A} (x : Γ ∋ A) → Σ[ Vσx ∈ Value (σ x) ] Σ[ Vσ′x ∈ Value (σ′ x) ] V[ A ]∋ Vσx ~ Vσ′x
+  
+  Gm[_]∋_~_ : (Δ : Cxt) → (mσ mσ′ : MSubst Δ ∅) → Set
+  Gm[ Δ ]∋ σ ~ σ′ = ⊤
+
+E-↠ : E[ A ]∋ M′ ~ N′ → (∅ ︔ ∅ ⊢ M -↠ M′) → (∅ ︔ ∅ ⊢ N -↠ N′) → E[ A ]∋ M ~ N
+E-↠ (M′′ P., N′′ P., M′-↠M′′ P., N′-↠N′′ P., VM′′ P., VN′′ P., VM′′~VN′′) M-↠M′ N-↠N′
+  = M′′ P., N′′ P., (_ -↠⟨ M-↠M′ ⟩ M′-↠M′′) P., (_ -↠⟨ N-↠N′ ⟩ N′-↠N′′)  P., VM′′ P., VN′′ P., VM′′~VN′′
+
+-- fundamental : (M : Δ ︔ Γ ⊢ A) → ∀ {mσ mσ′ : MSubst Δ ∅} {σ σ′ : Subst ∅ Γ ∅} → G[ Γ ]∋ σ ~ σ′ → E[ A ]∋ M m⟪ mσ ⟫ ⟪ σ ⟫ ~ M m⟪ mσ′ ⟫ ⟪ σ′ ⟫
+fundamental : (M : ∅ ︔ ∅ ⊢ A) → E[ A ]∋ M ~ M
+fundamental (ƛ M) = ƛ M P., ƛ M P., (ƛ M ∎) P., (ƛ M ∎) P., ƛ M P., ƛ M P., λ V → {! fundamental  !}
+fundamental (M · N) with fundamental M | fundamental N
+... | ƛ M₁′ P., ƛ M₂′ P., M-↠M₁′ P., M-↠M₂′ P., ƛ VM₁ P., ƛ VM₂ P., VM₁~VM₂  | N₁′ P., N₂′ P., N-↠N₁′ P., N-↠N₂′ P., VN₁ P., VN₂ P., VN₁~VN₂ with VM₁~VM₂ VN₁~VN₂ 
+... | MN₁ P., MN₂ P., M[N]₁-↠MN₁ P., M[N]₂-↠MN₂ P., VMN₁ P., VMN₂ P., VMN₁~VMN₂
+    = MN₁ P., MN₂ P.,
+      (M · N -↠⟨ ·-↠ M-↠M₁′ N-↠N₁′ ⟩ (ƛ M₁′) ·  N₁′ -→⟨ β-ƛ· ⟩ M₁′ [ N₁′ ] -↠⟨ M[N]₁-↠MN₁ ⟩ MN₁ ∎) P.,
+      (M · N -↠⟨ ·-↠ M-↠M₂′ N-↠N₂′ ⟩ (ƛ M₂′) ·  N₂′ -→⟨ β-ƛ· ⟩ M₂′ [ N₂′ ] -↠⟨ M[N]₂-↠MN₂ ⟩ MN₂ ∎) P.,
+      VMN₁ P., VMN₂ P., VMN₁~VMN₂
+fundamental ⟨⟩ = ⟨⟩ P., ⟨⟩ P., (⟨⟩ ∎) P., (⟨⟩ ∎) P., ⟨⟩ P., ⟨⟩ P., refl
+fundamental ⟨ M , N ⟩ = ⟨ M , N ⟩ P., ⟨ M , N ⟩ P., (⟨ M , N ⟩ ∎) P., (⟨ M , N ⟩ ∎) P., ⟨ M , N ⟩ P., ⟨ M , N ⟩ P., fundamental M P., fundamental N
+fundamental (proj₁ M) with fundamental M
+... | ⟨ M₁ , N₁ ⟩ P., ⟨ M₂ , N₂ ⟩ P., M-↠MN₁ P., M-↠MN₂ P., ⟨ .M₁ , .N₁ ⟩ P., ⟨ .M₂ , .N₂ ⟩ P., M₁~M₂ P., N₁~N₂
+    = E-↠ M₁~M₂ ((proj₁ M) -↠⟨   proj₁-↠ M-↠MN₁ ⟩ (proj₁ ⟨ M₁ , N₁ ⟩) -→⟨ β-⟨,⟩proj₁ ⟩ (M₁ ∎))
+      (((proj₁ M) -↠⟨   proj₁-↠ M-↠MN₂ ⟩ (proj₁ ⟨ M₂ , N₂ ⟩) -→⟨ β-⟨,⟩proj₁ ⟩ (M₂ ∎)))
+fundamental (proj₂ M) with fundamental M
+... | ⟨ M₁ , N₁ ⟩ P., ⟨ M₂ , N₂ ⟩ P., M-↠M₁ P., M-↠M₂ P., ⟨ .M₁ , .N₁ ⟩ P., ⟨ .M₂ , .N₂ ⟩ P., M₁~M₂ P., N₁~N₂
+    = E-↠ N₁~N₂ ((proj₂ M) -↠⟨   proj₂-↠ M-↠M₁ ⟩ (proj₂ ⟨ M₁ , N₁ ⟩) -→⟨ β-⟨,⟩proj₂ ⟩ (N₁ ∎))
+      ((proj₂ M) -↠⟨   proj₂-↠ M-↠M₂ ⟩ (proj₂ ⟨ M₂ , N₂ ⟩) -→⟨ β-⟨,⟩proj₂ ⟩ (N₂ ∎))
+fundamental zero = zero P., zero P., (zero ∎) P., (zero ∎) P., zero P., zero P., refl
+fundamental (suc M) with fundamental M 
+... | M₁ P., M₂ P., M-↠M₁ P., M-↠M₂ P., VM₁ P., VM₂ P., refl
+    = suc M₁ P., suc M₂ P., suc-↠ M-↠M₁ P., suc-↠ M-↠M₂ P., suc M₁ P., suc M₂ P., refl
+fundamental (rec M N L) with fundamental L | fundamental M
+... | zero P., .zero P., L-↠zero P., _ P., VL′ P., _ P., refl
+    | M₁ P., M₂ P., M-↠M₁ P., M-↠M₂ P., VM₁ P., VM₂ P., VM₁~VM₂ = M₁ P., M₂ P.,
+      (rec M N L -↠⟨ rec₃-↠ L-↠zero ⟩ rec M N zero -→⟨ β-rec-zero ⟩ M-↠M₁) P.,
+      (rec M N L -↠⟨ rec₃-↠ L-↠zero ⟩ rec M N zero -→⟨ β-rec-zero ⟩ M-↠M₂) P.,
+      VM₁ P., VM₂ P., VM₁~VM₂
+... | suc L′ P., _ P., L-↠sL′ P., _ P., VsL′ P., _ P., refl | _ = {!   !} P., {!   !}
+fundamental (mlet M `in N) = {!   !}
+fundamental (mfix M) = mfix M P., mfix M P., (mfix M ∎) P., (mfix M ∎) P., mfix M P., mfix M P., tt
+
+rice₂ : (d : ∅ ︔ ∅ ⊢ □ A →̇ ℕ̇)
+     → ∅ ︔ ∅ ⊢ (d · (mfix M)) -↠ zero
+     → ∅ ︔ ∅ ⊢ (d · (mfix N)) -↠ suc zero
+     → ⊥
+rice₂ {A = A} {M = M} {N = N} d dM-↠0 dN-↠1 with fundamental d
+... | ƛ d₁ P., ƛ d₂ P., d-↠d₁ P., d-↠d₂ P., ƛ .d₁ P., ƛ .d₂ P., vd₁~vd₂ with vd₁~vd₂ {mfix M} {mfix N} {mfix M} {mfix N} tt
+... | n₁ P., n₂ P., -↠n₁ P., -↠n₂ P., vn₁ P., vn₂ P., refl = {!   !}
+
+
+{-
+-- Contextual Equivalence
+_∋_~_ : (A : Type) (M N : ∅ ︔ ∅ ⊢ A) → Set
+A ∋ M ~ N = ∀ f →  Σ[ k ∈ ℕ ] (∅ ︔ ∅ ⊢ f · M -↠ ℕtoℕ̇ k) × (∅ ︔ ∅ ⊢ f · N -↠ ℕtoℕ̇ k)
+
+go : A ∋ M ~ N at n → A ∋ M ~ N
+go M~N f = ∋~-refl f ≤-refl M~N
+
+□∋ : (□ A) ∋ M ~ N at n
+□∋ = tt
+
+rice₂ : (d : ∅ ︔ ∅ ⊢ □ A →̇ ℕ̇)
+     → ∅ ︔ ∅ ⊢ (d · (mfix M)) -↠ zero
+     → ∅ ︔ ∅ ⊢ (d · (mfix N)) -↠ suc zero
+     → ⊥
+rice₂ {M = M} {N = N} d dM-↠0 dN-↠1 with ∋~-refl {n = 0} d ≤-refl {M₂ = mfix M} {N₂ = mfix N} tt
+... | suc k Data.Product., dM-↠k Data.Product., dN-↠k = {!   !} 
+... | zero Data.Product., dM-↠k Data.Product., dN-↠k with confluence dN-↠k dN-↠1
+... | .zero Data.Product., (.zero ∎) Data.Product., (.(suc zero) -→⟨ ξ-suc () ⟩ _)
+  -}  

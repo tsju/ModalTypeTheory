@@ -422,3 +422,30 @@ progress (mfix M)    = done (mfix M)
   → Δ ︔ Γ ⊢ ƛ M -↠ ƛ M′ 
 ƛ-↠ (M ∎)              = ƛ M ∎
 ƛ-↠ (M -→⟨ M→M′ ⟩ M→N) = ƛ M -→⟨ ξ-ƛ M→M′ ⟩ ƛ-↠ M→N
+
+·-↠ : Δ ︔ Γ ⊢ M -↠ M′
+  → Δ ︔ Γ ⊢ N -↠ N′
+  → Δ ︔ Γ ⊢ M · N -↠ M′ · N′
+·-↠ (M ∎) (N ∎) = M · N ∎
+·-↠ M-↠M′ (N -→⟨ x ⟩ N-↠N′) = _ -→⟨ ξ-·₂ x ⟩ ·-↠ M-↠M′ N-↠N′
+·-↠ (M -→⟨ x ⟩ M-↠M′) N-↠N′ = _ -→⟨ ξ-·₁ x ⟩ ·-↠ M-↠M′ N-↠N′
+
+suc-↠ : Δ ︔ Γ ⊢ M -↠ M′
+  → Δ ︔ Γ ⊢ suc M -↠ suc M′
+suc-↠ (M ∎) = suc M ∎
+suc-↠ (M -→⟨ x ⟩ M-↠M′) = _ -→⟨ ξ-suc x ⟩ suc-↠ M-↠M′
+
+proj₁-↠ : Δ ︔ Γ ⊢ M -↠ M′
+  → Δ ︔ Γ ⊢ proj₁ M -↠ proj₁ M′
+proj₁-↠ (M ∎) = proj₁ M ∎
+proj₁-↠ (M -→⟨ x ⟩ M-↠M′) = _ -→⟨ ξ-proj₁ x ⟩ proj₁-↠ M-↠M′
+
+proj₂-↠ : Δ ︔ Γ ⊢ M -↠ M′
+  → Δ ︔ Γ ⊢ proj₂ M -↠ proj₂ M′
+proj₂-↠ (M ∎) = proj₂ M ∎
+proj₂-↠ (M -→⟨ x ⟩ M-↠M′) = _ -→⟨ ξ-proj₂ x ⟩ proj₂-↠ M-↠M′
+
+rec₃-↠ : Δ ︔ Γ ⊢ L -↠ L′
+  → Δ ︔ Γ ⊢ rec M N L -↠ rec M N L′
+rec₃-↠ (L ∎) = rec _ _ L ∎
+rec₃-↠ (L -→⟨ x ⟩ L-↠L′) = _ -→⟨ ξ-rec₃ x ⟩ rec₃-↠ L-↠L′
